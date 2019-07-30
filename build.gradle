@@ -1,0 +1,87 @@
+buildscript {
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:2.2.0.M4"
+        classpath "io.franzbecker:gradle-lombok:3.1.0"
+    }
+}
+
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'java'
+//    id 'org.springframework.boot' version '2.1.2.RELEASE' // Same as used by CAS 6.0.3
+}
+
+apply from: "http://dl.bintray.com/scalding/generic/waroverlay.gradle"
+apply plugin: "org.springframework.boot"
+apply plugin: "io.franzbecker.gradle-lombok"
+lombok {
+    version = "1.18.8"
+}
+
+idea {
+    module {
+        downloadJavadoc = false
+        downloadSources = true
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/snapshot/' }
+    maven { url 'http://repo.spring.io/libs-milestone/' }
+    maven { url 'https://build.shibboleth.net/nexus/content/repositories/releases/' }
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+}
+
+dependencies {
+    runtime("org.apereo.cas:cas-server-webapp-init:$casVersion") {
+        transitive = true
+    }
+    runtime("org.apereo.cas:cas-server-webapp-tomcat:$casVersion@war") {
+        transitive = true
+    }
+    compile 'io.micrometer:micrometer-registry-prometheus:latest.release'
+    compile("org.springframework.session:spring-session-core:$springSessionVersion") {
+        transitive = true
+    }
+    compile("org.hsqldb:hsqldb:$hsqlVersion")
+    compile("org.postgresql:postgresql:$postgresqlVersion")
+}
+
+[
+        'core-authentication-api',
+        'core-util-api',
+        'core-tickets',
+        'core-tickets-api',
+        'support-oidc',                    // https://apereo.github.io/cas/6.0.x/installation/OIDC-Authentication.html
+        'support-yaml-service-registry',   // https://apereo.github.io/cas/6.0.x/services/YAML-Service-Management.html
+        'support-pac4j-webflow',           // https://apereo.github.io/cas/6.0.x/integration/Delegate-Authentication.html
+        'support-rest-authentication',     // https://apereo.github.io/cas/6.0.x/installation/Rest-Authentication.html
+].each { casComponent ->
+    dependencies {
+        compile "org.apereo.cas:cas-server-$casComponent:$casVersion"
+    }
+}
+
+springBoot {
+    mainClassName = 'org.springframework.boot.loader.WarLauncher'
+}
+
+bootWar {
+    manifest {
+        attributes 'Start-Class': 'org.apereo.cas.web.CasWebApplication'
+        attributes 'Class-Path': '/etc/cas/themes/'
+    }
+}
+
+warOverlay {
+    includeWarJars true
+}
+
+task run(type: JavaExec) {
+    dependsOn bootWar
+    main = "-jar"
+    jvmArgs = ["-Dcas.log.level=debug"]
+    args "$buildDir/libs/${project.name}-${project.version}.war"
+}

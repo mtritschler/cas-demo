@@ -1,0 +1,9 @@
+--- !<org.apereo.cas.services.OidcRegisteredService>
+clientId: foo
+clientSecret: foo
+serviceId: "some-service-id"
+name: "foo"
+bypassApprovalPrompt: true
+id: 001
+description: "Foo Service"
+
